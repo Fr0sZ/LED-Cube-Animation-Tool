@@ -47,26 +47,6 @@ public class LEDAnimation : MonoBehaviour {
 
 	void Awake()
 	{
-		//ResertCube();
-		/*
-		//Create the number of lamps needed depending on the length of the cube
-		for(int i = 0; i < m_cubeLength; i++)
-		{
-			for(int j = 0; j < m_cubeLength; j++)
-			{
-				for(int k = 0; k < m_cubeLength; k++)
-				{
-					GameObject lamp = Instantiate(m_lampPrefab, new Vector3(j * m_lengthDistance, i * m_hightDistance, -k * m_lengthDistance), Quaternion.identity) as GameObject;
-					lamp.GetComponent<Lamp>().m_id = i * m_cubeLength * m_cubeLength + j * m_cubeLength + k;
-					m_lamps.Add(lamp);
-				}
-			}
-		}
-	
-		FrameState fs = new FrameState();
-		fs.duration = 5;
-		fs.lampState = new BitArray((int)Mathf.Pow(m_cubeLength, 3));
-		m_animation.Add(fs);*/
 	}
 
 	void Start()
