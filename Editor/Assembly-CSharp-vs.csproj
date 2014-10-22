@@ -5,7 +5,7 @@
 	<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
 	<ProductVersion>10.0.20506</ProductVersion>
 	<SchemaVersion>2.0</SchemaVersion>
-	<ProjectGuid>{0ABEDE84-D1E3-7F6B-F5C1-956A4658CB51}</ProjectGuid>
+	<ProjectGuid>{CFD1A8E8-13C1-9B39-A2F9-DE10E412886A}</ProjectGuid>
 	<OutputType>Library</OutputType>
 	<AppDesignerFolder>Properties</AppDesignerFolder>
 	<RootNamespace></RootNamespace>
@@ -48,6 +48,7 @@
   <ItemGroup>
      <Compile Include="Assets\Scripts\CameraMovement.cs" />
      <Compile Include="Assets\Scripts\ClipboardHelper.cs" />
+     <Compile Include="Assets\Scripts\Console.cs" />
      <Compile Include="Assets\Scripts\ErrorManager.cs" />
      <Compile Include="Assets\Scripts\LEDAnimation.cs" />
      <Compile Include="Assets\Scripts\Lamp.cs" />
