@@ -22,9 +22,18 @@ public struct FrameState
 public class LEDAnimation : MonoBehaviour {
 
 	public GameObject 	m_lampPrefab;
-	private int 		m_cubeLength 	= 3;
-	private float 		m_lengthDistance= 2;
-	private float 		m_hightDistance	= 2;
+	public KeyCode 		m_pausePlayKey 		= KeyCode.Space;
+	public KeyCode 		m_newFrameKey 		= KeyCode.Alpha1;
+	public KeyCode 		m_copyFrameKey 		= KeyCode.Alpha2;
+	public KeyCode 		m_deleteFrameKey 	= KeyCode.Alpha3;
+	public KeyCode 		m_nextFrameKey 		= KeyCode.G;
+	public KeyCode 		m_prevFrameKey 		= KeyCode.F;
+
+	public GameObject 	m_floor;
+
+	private int 		m_cubeLength 		= 3;
+	private float 		m_lengthDistance	= 2;
+	private float 		m_hightDistance	=	 2;
 
 	private List<GameObject> m_lamps = new List<GameObject>();
 	private List<FrameState> m_animation = new List<FrameState>();
@@ -34,21 +43,20 @@ public class LEDAnimation : MonoBehaviour {
 	private float	m_playbackSpeed = 1;
 	private float 	m_playTimer;
 
+	private bool	m_showImportExport;
 	private bool 	m_showAcceptImport;
 
 	private bool	m_showSettings;
 	private bool	m_showAcceptCubeChangeWindow;
+	private bool	m_s_fullscreen;
 	private bool	m_s_vSync;
+	private bool	m_s_showFloor = true;
 	private float 	m_s_cameraSens;
 	private float	m_s_cameraSpeed;
 	private float	m_s_cameraDragSpeed;
 	private int 	m_s_cubeLength;
 
-
-	void Awake()
-	{
-	}
-
+	
 	void Start()
 	{
 		LoadSettings();
@@ -57,20 +65,7 @@ public class LEDAnimation : MonoBehaviour {
 
 	void Update()
 	{
-		if (!m_playingAnimation && Input.GetButtonDown("Fire1")) 
-		{
-			RaycastHit hit;
-			Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-			if (Physics.Raycast(ray, out hit))
-			{
-				if(hit.transform.tag == "Lamp")
-				{
-					Lamp lamp = hit.transform.gameObject.GetComponent<Lamp>();
-					lamp.ToogleLamp();
-					m_animation[m_currentFrame].lampState[lamp.m_id] ^= true;
-				}
-			}
-		}
+		UpdateInput();
 
 		if(m_playingAnimation)
 		{
@@ -91,8 +86,62 @@ public class LEDAnimation : MonoBehaviour {
 		}
 	}
 
+	void UpdateInput()
+	{
+		if (!m_playingAnimation && Input.GetButtonDown("Fire1")) 
+		{
+			RaycastHit hit;
+			Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+			if (Physics.Raycast(ray, out hit))
+			{
+				if(hit.transform.tag == "Lamp")
+				{
+					Lamp lamp = hit.transform.gameObject.GetComponent<Lamp>();
+					lamp.ToogleLamp();
+					m_animation[m_currentFrame].lampState[lamp.m_id] ^= true;
+				}
+			}
+		}
+		
+		if(Input.GetKeyDown(m_pausePlayKey))
+		{
+			PlayStopAnimation();
+		}
+		
+		if(Input.GetKeyDown(m_newFrameKey))
+		{
+			AddNewFrame();
+		}
+		
+		if(Input.GetKeyDown(m_copyFrameKey))
+		{
+			CopyNewFrame();
+		}
+		
+		if(Input.GetKeyDown(m_deleteFrameKey))
+		{
+			DeleteFrame();
+		}
+
+		if(Input.GetKeyDown(m_nextFrameKey))
+		{
+			SelectFrame(m_currentFrame + 1);
+		}
+		
+		if(Input.GetKeyDown(m_prevFrameKey))
+		{
+			SelectFrame(m_currentFrame - 1);
+		}
+	}
+
 	void SelectFrame(int frame)
 	{
+		if(frame >= m_animation.Count)
+			frame -= m_animation.Count;
+
+		if(frame < 0)
+			frame += m_animation.Count;
+
 		m_currentFrame = frame;
 
 		FrameState fs = m_animation[frame];
@@ -174,9 +223,34 @@ public class LEDAnimation : MonoBehaviour {
 		return sb.ToString();
 	}
 
+	string GenerateCSVOutput()
+	{
+		StringBuilder sb = new StringBuilder();
+		
+		foreach(FrameState fs in m_animation)
+		{
+			for(int i = 0; i < (int)Mathf.Pow(m_cubeLength, 3);i++)
+			{
+				sb.Append(fs.lampState[i] == true ? "1" : "0");
+				
+				if((i+1)%m_cubeLength == 0 && i != (int)Mathf.Pow(m_cubeLength, 3)-1)
+					sb.Append(", ");
+			}
+			sb.Append(", " + fs.duration + ",\n");
+		}
+		
+		
+		return sb.ToString();
+	}
+	
 	void ExportToClipBoard()
 	{
 		ClipboardHelper.clipBoard = GenerateOutput();
+	}
+
+	void ExportCSVToClipBoard()
+	{
+		ClipboardHelper.clipBoard = GenerateCSVOutput();
 	}
 
 	void ImportFromClipBoard()
@@ -267,9 +341,9 @@ public class LEDAnimation : MonoBehaviour {
 						bool on = int.Parse(inputs[i][j].ToString()) == 1 ? true : false;
 						ba.Set(counter*m_cubeLength + j, on);
 					}
-					catch(System.IndexOutOfRangeException ex)
+					catch(System.IndexOutOfRangeException)
 					{
-						Debug.LogError("Row: " + Mathf.Floor(i / (m_cubeLength*m_cubeLength)));
+						Debug.LogError("Error Importing Row: " + Mathf.Floor(i / (m_cubeLength*m_cubeLength)));
 					}
 				}
 			}
@@ -326,6 +400,7 @@ public class LEDAnimation : MonoBehaviour {
 
 	void OpenSettings()
 	{
+		m_s_fullscreen = Screen.fullScreen;
 		m_s_vSync = QualitySettings.vSyncCount == 1 ? true : false;
 
 		m_s_cameraSens		= Camera.main.GetComponent<MouseLook>().sensitivityX;
@@ -338,6 +413,7 @@ public class LEDAnimation : MonoBehaviour {
 	{
 		m_showSettings = false;
 
+		Screen.fullScreen = m_s_fullscreen;
 		PlayerPrefs.SetFloat("CameraSens", m_s_cameraSens);
 		PlayerPrefs.SetFloat("CameraSpeed", m_s_cameraSpeed);
 		PlayerPrefs.SetFloat("CameraDragSpeed", m_s_cameraDragSpeed);
@@ -347,6 +423,8 @@ public class LEDAnimation : MonoBehaviour {
 		Camera.main.GetComponent<MouseLook>().sensitivityY		 	= m_s_cameraSens;
 		Camera.main.GetComponent<CameraMovement>().m_cameraSpeed 	= m_s_cameraSpeed;
     	Camera.main.GetComponent<CameraMovement>().m_dragCameraSpeed= m_s_cameraDragSpeed;
+
+		m_floor.SetActive(m_s_showFloor);
 
 		if(m_s_cubeLength != m_cubeLength)
 		{
@@ -455,19 +533,49 @@ public class LEDAnimation : MonoBehaviour {
 		m_playbackSpeed = Mathf.Round(GUI.HorizontalSlider(new Rect(410,Screen.height - (neededRows + 1) * 25 - 45,100,20), m_playbackSpeed, 0.1F, 5.0F) * 10) / 10;
 		GUI.Label(new Rect(510,Screen.height - (neededRows + 1) * 25 - 50,200,20), "Playback speed: " + m_playbackSpeed);
 
-		if(GUI.Button(new Rect(Screen.width - 155,50,150,20), "Copy To Clipboard"))
+
+		//Import Export
+		int importExportButtonX = Screen.width - 105;
+		int importExportButtonY = 25;
+		if(GUI.Button(new Rect(importExportButtonX, importExportButtonY, 100, 20), "Import/Export"))
 		{
-			ExportToClipBoard();
+			m_showImportExport = !m_showImportExport;
 		}
 
-		if(GUI.Button(new Rect(Screen.width - 155,80,150,20), "Import From Clipboard"))
+
+		int importExportWindowX 		= Screen.width - 200;
+		int importExportWindowY 		= 55;
+		int importExportWindowWidth 	= 190;
+		int importExportWindowHeight 	= 80;
+		int buttonsWidth				= 180;
+		int copyToClipboardX 			= importExportWindowX + 5;
+		int copyToClipboardY			= importExportWindowY + 5;
+		int copyCSVToClipboardX 		= importExportWindowX + 5;
+		int copyCSVToClipboardY			= importExportWindowY + 30;
+		int importFromClipboardX		= importExportWindowX + 5;
+		int importFromClipboardY 		= importExportWindowY + 55;
+		if(m_showImportExport)
 		{
-			m_showAcceptImport = !m_showAcceptImport;
+			GUI.Box(new Rect(importExportWindowX, importExportWindowY, importExportWindowWidth, importExportWindowHeight),"");
+			if(GUI.Button(new Rect(copyToClipboardX,copyToClipboardY,buttonsWidth,20), "Copy To Clipboard (C Array)"))
+			{
+				ExportToClipBoard();
+			}
+
+			if(GUI.Button(new Rect(copyCSVToClipboardX,copyCSVToClipboardY,buttonsWidth,20), "Copy To Clipboard (CSV)"))
+			{
+				ExportCSVToClipBoard();
+			}
+
+			if(GUI.Button(new Rect(importFromClipboardX,importFromClipboardY,buttonsWidth,20), "Import From Clipboard"))
+			{
+				m_showAcceptImport = !m_showAcceptImport;
+			}
 		}
 
 		if(m_showAcceptImport)
 		{
-			GUI.Box(new Rect(Screen.width - 400,60,250,80), "Are you sure you want to import?\nIt will remove everything you have done.");
+			GUI.Box(new Rect(Screen.width - 400,60,250,80), "Are you sure you want to import?\nIt will remove all current frames.");
 			
 			if(GUI.Button(new Rect(Screen.width - 380,110,50,25), "Yes"))
 			{
@@ -482,7 +590,23 @@ public class LEDAnimation : MonoBehaviour {
 		}
 
 		//SETTIGNS START
-		if(GUI.Button(new Rect(5,5, 100, 20), "Settings"))
+		int settingsButtonX = 5;
+		int settingsButtonY = 25;
+
+		int settingsWindowX 	= 5;
+		int settingsWindowY 	= 50;
+		int settingsWindowWidth = 275;
+		int settingsWindowHeight= 190;
+		int fullscreenY		= settingsWindowY 	+ 5;
+		int vsyncY 			= fullscreenY 		+ 20;
+		int showFloorY		= vsyncY 			+ 20;
+		int cameraSensY 	= showFloorY 		+ 20;
+		int cameraSpeedY 	= cameraSensY 		+ 20;
+		int cameraDragSpeedY= cameraSpeedY 		+ 20;
+		int cubeSizeY		= cameraDragSpeedY 	+ 20;
+		int buttonsY		= cubeSizeY 		+ 30;
+
+		if(GUI.Button(new Rect(settingsButtonX, settingsButtonY, 100, 20), "Settings"))
 		{
 			m_showSettings = !m_showSettings;
 			if(m_showSettings)
@@ -493,29 +617,35 @@ public class LEDAnimation : MonoBehaviour {
 
 		if(m_showSettings)
 		{
-			GUI.Box(new Rect(5, 30, 275, 150),"");
+			GUI.Box(new Rect(settingsWindowX, settingsWindowY, settingsWindowWidth, settingsWindowHeight),"");
 
-			GUI.Label(new Rect(10, 30, 100, 25), "Vsync");
-			m_s_vSync = GUI.Toggle(new Rect(130, 31, 100, 25), m_s_vSync, "");
+			GUI.Label(new Rect(10, fullscreenY, 100, 25), "Fullscreen");
+			m_s_fullscreen = GUI.Toggle(new Rect(130, fullscreenY + 1, 100, 25), m_s_fullscreen, "");
 
-			GUI.Label(new Rect(10, 50, 130, 25), "Camera Sensitivity");
-			m_s_cameraSens = GUI.HorizontalSlider(new Rect(130, 55, 100, 20), m_s_cameraSens, 1.0F, 35.0F);
-			GUI.Label(new Rect(235, 50, 100, 25), m_s_cameraSens.ToString("F1"));
+			GUI.Label(new Rect(10, vsyncY, 100, 25), "Vsync");
+			m_s_vSync = GUI.Toggle(new Rect(130, vsyncY + 1, 100, 25), m_s_vSync, "");
+
+			GUI.Label(new Rect(10, showFloorY, 100, 25), "Show Floor");
+			m_s_showFloor = GUI.Toggle(new Rect(130, showFloorY + 1, 100, 25), m_s_showFloor, "");
+
+			GUI.Label(new Rect(10, cameraSensY, 130, 25), "Camera Sensitivity");
+			m_s_cameraSens = GUI.HorizontalSlider(new Rect(130, cameraSensY + 5, 100, 20), m_s_cameraSens, 1.0F, 35.0F);
+			GUI.Label(new Rect(235, cameraSensY, 100, 25), m_s_cameraSens.ToString("F1"));
 			
-			GUI.Label(new Rect(10, 75, 130, 40), "Camera Speed");
-			m_s_cameraSpeed = GUI.HorizontalSlider(new Rect(130, 80, 100, 20), m_s_cameraSpeed, 1.0F, 35.0F);
-			GUI.Label(new Rect(235, 75, 100, 40), m_s_cameraSpeed.ToString("F1"));
+			GUI.Label(new Rect(10, cameraSpeedY, 130, 40), "Camera Speed");
+			m_s_cameraSpeed = GUI.HorizontalSlider(new Rect(130, cameraSpeedY + 5, 100, 20), m_s_cameraSpeed, 1.0F, 35.0F);
+			GUI.Label(new Rect(235, cameraSpeedY, 100, 40), m_s_cameraSpeed.ToString("F1"));
 
-			GUI.Label(new Rect(10, 100, 130, 40), "Camera Drag Speed");
-			m_s_cameraDragSpeed = GUI.HorizontalSlider(new Rect(130, 105, 100, 20), m_s_cameraDragSpeed, 1.0F, 35.0F);
-			GUI.Label(new Rect(235, 100, 100, 40), m_s_cameraDragSpeed.ToString("F1"));
+			GUI.Label(new Rect(10, cameraDragSpeedY, 130, 40), "Camera Drag Speed");
+			m_s_cameraDragSpeed = GUI.HorizontalSlider(new Rect(130, cameraDragSpeedY + 5, 100, 20), m_s_cameraDragSpeed, 1.0F, 35.0F);
+			GUI.Label(new Rect(235, cameraDragSpeedY, 100, 40), m_s_cameraDragSpeed.ToString("F1"));
 
-			GUI.Label(new Rect(10, 125, 130, 40), "Cube Size");
-			m_s_cubeLength = (int)GUI.HorizontalSlider(new Rect(130, 130, 100, 20), m_s_cubeLength, 1, 15);
-			GUI.Label(new Rect(235, 125, 100, 40), m_s_cubeLength.ToString());
+			GUI.Label(new Rect(10, cubeSizeY, 130, 40), "Cube Size");
+			m_s_cubeLength = (int)GUI.HorizontalSlider(new Rect(130, cubeSizeY + 5, 100, 20), m_s_cubeLength, 1, 15);
+			GUI.Label(new Rect(235, cubeSizeY, 100, 40), m_s_cubeLength.ToString());
 
 
-			if(GUI.Button(new Rect(5, 140, 50, 25), "Apply"))
+			if(GUI.Button(new Rect(10, buttonsY, 50, 25), "Apply"))
 			{
 				if(m_s_cubeLength == m_cubeLength)
 				{
@@ -526,7 +656,7 @@ public class LEDAnimation : MonoBehaviour {
 					m_showAcceptCubeChangeWindow = true;
 			}
 			
-			if(GUI.Button(new Rect(100, 140, 50, 25), "Close"))
+			if(GUI.Button(new Rect(100, buttonsY, 50, 25), "Close"))
 			{
 				m_showSettings = false;
 				m_showAcceptCubeChangeWindow = false;
