@@ -33,7 +33,7 @@ public class LEDAnimation : MonoBehaviour {
 
 	private int 		m_cubeLength 		= 3;
 	private float 		m_lengthDistance	= 2;
-	private float 		m_hightDistance	=	 2;
+	private float 		m_hightDistance		= 2;
 
 	private List<GameObject> m_lamps = new List<GameObject>();
 	private List<FrameState> m_animation = new List<FrameState>();
@@ -55,8 +55,9 @@ public class LEDAnimation : MonoBehaviour {
 	private float	m_s_cameraSpeed;
 	private float	m_s_cameraDragSpeed;
 	private int 	m_s_cubeLength;
+	private string 	m_exportText = "";
+	private string  m_importText = "";
 
-	
 	void Start()
 	{
 		LoadSettings();
@@ -219,7 +220,7 @@ public class LEDAnimation : MonoBehaviour {
 			sb.Append(", " + fs.duration + ",\n");
 		}
 
-
+		Debug.Log (m_animation.Count + " rows exported to C array");
 		return sb.ToString();
 	}
 
@@ -239,25 +240,29 @@ public class LEDAnimation : MonoBehaviour {
 			sb.Append(", " + fs.duration + ",\n");
 		}
 		
-		
+		Debug.Log (m_animation.Count + " rows exported to CSV");
 		return sb.ToString();
 	}
 	
 	void ExportToClipBoard()
 	{
-		ClipboardHelper.clipBoard = GenerateOutput();
+		m_exportText = GenerateOutput();
 	}
 
 	void ExportCSVToClipBoard()
 	{
-		ClipboardHelper.clipBoard = GenerateCSVOutput();
+		m_exportText = GenerateCSVOutput();
 	}
 
 	void ImportFromClipBoard()
 	{
-		ResertCube();
+		Debug.Log ("Importing From Clipboard");
 
-		string input = ClipboardHelper.clipBoard;
+		ResertCube();
+		m_animation.Clear ();	//ResertCube creates a new frame so need to clear it
+
+		char[] charsToTrim = { '\n', ' ', ','};
+		string input = m_importText.Trim(charsToTrim);
 
 		string[] lines = input.Split(new string[] { "\r\n", "\n" }, System.StringSplitOptions.None);
 
@@ -350,7 +355,11 @@ public class LEDAnimation : MonoBehaviour {
 			counter++;
 			a++;
 		}
+
+		SelectFrame(0);
 	}
+
+
 
 
 	void ResertCube()
@@ -557,12 +566,12 @@ public class LEDAnimation : MonoBehaviour {
 		if(m_showImportExport)
 		{
 			GUI.Box(new Rect(importExportWindowX, importExportWindowY, importExportWindowWidth, importExportWindowHeight),"");
-			if(GUI.Button(new Rect(copyToClipboardX,copyToClipboardY,buttonsWidth,20), "Copy To Clipboard (C Array)"))
+			if(GUI.Button(new Rect(copyToClipboardX,copyToClipboardY,buttonsWidth,20), "Export as C Array"))
 			{
 				ExportToClipBoard();
 			}
 
-			if(GUI.Button(new Rect(copyCSVToClipboardX,copyCSVToClipboardY,buttonsWidth,20), "Copy To Clipboard (CSV)"))
+			if(GUI.Button(new Rect(copyCSVToClipboardX,copyCSVToClipboardY,buttonsWidth,20), "Export as CSV"))
 			{
 				ExportCSVToClipBoard();
 			}
@@ -570,21 +579,31 @@ public class LEDAnimation : MonoBehaviour {
 			if(GUI.Button(new Rect(importFromClipboardX,importFromClipboardY,buttonsWidth,20), "Import From Clipboard"))
 			{
 				m_showAcceptImport = !m_showAcceptImport;
+
+				if(m_showAcceptImport)
+					m_importText = "";
+			}
+		}
+
+		if(!string.IsNullOrEmpty(m_exportText))
+	   	{
+			GUI.TextArea(new Rect(Screen.width / 2 - 200, Screen.height/2 - 100, 400, 200), m_exportText);
+			if(GUI.Button(new Rect(Screen.width / 2 + 150, Screen.height/2 + 105, 50, 25), "Close"))
+			{
+				m_exportText = "";
 			}
 		}
 
 		if(m_showAcceptImport)
 		{
-			GUI.Box(new Rect(Screen.width - 400,60,250,80), "Are you sure you want to import?\nIt will remove all current frames.");
-			
-			if(GUI.Button(new Rect(Screen.width - 380,110,50,25), "Yes"))
+			m_importText = GUI.TextArea(new Rect(Screen.width / 2 - 200, Screen.height/2 - 100, 400, 200), m_importText);
+			if(GUI.Button(new Rect(Screen.width / 2 + 95, Screen.height/2 + 105, 50, 25), "Close"))
 			{
-				ImportFromClipBoard();
 				m_showAcceptImport = false;
 			}
-
-			if(GUI.Button(new Rect(Screen.width - 250,110,50,25), "No"))
+			if(GUI.Button(new Rect(Screen.width / 2 + 150, Screen.height/2 + 105, 50, 25), "Import"))
 			{
+				ImportFromClipBoard();
 				m_showAcceptImport = false;
 			}
 		}
