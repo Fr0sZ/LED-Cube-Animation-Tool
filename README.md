@@ -3,7 +3,7 @@ LED-Cube-Animation-Tool
 
 A fast and easy way to make animations for your LED cube.  
 Exports to CSV format.  
-More info at <a href="www.victormoller.com/ledcube">victormoller.com/ledcube</a>
+Use it in the browser at <a href="www.victormoller.com/ledcube">victormoller.com/ledcube</a>
 
 
 ## How to use
